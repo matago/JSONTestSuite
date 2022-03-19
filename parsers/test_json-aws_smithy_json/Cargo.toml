@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aws-smithy-json = { path = "~/smithy-rs/rust-runtime/aws-smithy-json" }
+aws-smithy-json = { path = "../../../smithy-rs/rust-runtime/aws-smithy-json" }
 
 
 [[bin]]
-name = "rj"
+name = "sj"
 path = "src/main.rs"
