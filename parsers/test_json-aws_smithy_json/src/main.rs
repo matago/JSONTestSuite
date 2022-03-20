@@ -4,6 +4,13 @@ use std::io::Read;
 
 use aws_smithy_json::deserialize::{json_token_iter, Error, Token};
 
+#[derive(PartialEq)]
+enum ContainerState {
+    UnInitiated,
+    Open,
+    Closed,
+}
+
 fn main() {
     let args: Vec<_> = env::args().collect();
     if args.len() != 2 {
@@ -20,40 +27,49 @@ fn main() {
     }
 
     let result: Result<Vec<Token>, Error> = json_token_iter(s.as_bytes()).collect();
+
     match result {
         Err(_) => std::process::exit(1),
         Ok(vectoken) => {
-            // Unescape all strings and fail if any of them failed to unescape.
+            // No data received
+            if vectoken.is_empty() {
+                std::process::exit(1)
+            }
+
+            let mut container_state = ContainerState::UnInitiated;
             let mut open_tokens: Vec<&Token> = Vec::new();
-            let mut document_opened = false;
-            let mut document_closed = false;
+
             for token in vectoken.iter() {
-                let current_open_token = open_tokens.last();
-                match (token, current_open_token) {
-                    // We can accept any starting container token, regardless of what we need to close
-                    // IF we haven't completed a full container cycle (no forests)
+                match (token, open_tokens.last()) {
+                    // We can accept any Start* token IF we have not Opened and Closed the first opened container
                     (&Token::StartArray { offset: _ } | &Token::StartObject { offset: _ }, _) => {
-                        // multi-doc not allowed
-                        if document_opened && document_closed {
-                            std::process::exit(1)
+                        match container_state {
+                            ContainerState::UnInitiated => container_state = ContainerState::Open,
+                            ContainerState::Open => (),
+                            ContainerState::Closed => std::process::exit(1),
                         }
                         open_tokens.push(token);
-                        document_opened = true;
+
                     }
-                    // We can't accept a closing token that doesnt match
+                    // We cannot accept an End{Object,Array} token without a matching Start{Object,Array}
                     (&Token::EndArray { offset: _ }, Some(&Token::StartObject { offset: _ })) | (&Token::EndObject { offset: _ }, Some(&Token::StartArray { offset: _ })) => {
                         std::process::exit(2);
                     }
-                    // Becuase of the prior specificity, we can use an OR inside the tuples for the happy path,
+                    // Because of the prior specificity, we can use an OR inside the tuples for handling the happy path
                     (&Token::EndArray { offset: _ } | &Token::EndObject { offset: _ }, Some(&Token::StartArray { offset: _ } | &Token::StartObject { offset: _ })) => {
-                        open_tokens.pop(); //pull out the matched token
+                        open_tokens.pop(); //pop the matched token
                         if open_tokens.is_empty() {
-                            document_closed = true; //we have completed a full container open and closure
+                            container_state = ContainerState::Closed
                         }
                     }
-                    (&Token::EndArray { offset: _ } | &Token::EndObject { offset: _ }, _) => {
-                        std::process::exit(1) //closing a container that isnt open
+                    // We cannot accept End* without a waiting Start* token
+                    (&Token::EndArray { offset: _ } | &Token::EndObject { offset: _ }, None) => {
+                        std::process::exit(1)
                     }
+                    // We cannot accept trailing garabge after closing an outer container
+                    (_,_) if container_state == ContainerState::Closed => {
+                        std::process::exit(2)
+                    }                    
                     (&Token::ValueString { offset: _, value }, _) => {
                         if value.to_unescaped().is_err() {
                             std::process::exit(1)
