@@ -1,0 +1,6 @@
+[
+    "Rust aws-smithy-json",
+    "Rust serde_json",
+    "Rust json-rust",
+    "Java Jackson 2.8.4"
+]
