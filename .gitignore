@@ -13,8 +13,10 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-results/logs.txt
-results/parsing_pruned.html
-results/parsing.html
+*/results/logs.txt
+/results/parsing_pruned.html
+/results/parsing.html
 
 .vscode/
+
+*.DS_Store
