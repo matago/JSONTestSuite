@@ -22,27 +22,26 @@ BAD_CPU_TYPE = 86
 
 programs = {
     "Rust aws-smithy-json": {
-        "url": "dontcare",
+        "url": "",
         "commands": [
             os.path.join(PARSERS_DIR, "test_json-aws_smithy_json/target/release/sj")
         ],
     },
     "Rust json-rust": {
         "url": "https://github.com/maciejhirsz/json-rust",
-        "commands": [os.path.join(PARSERS_DIR, "test_json-rust/target/release/tj")],
+        "commands": [os.path.join(PARSERS_DIR, "test_json-rust/target/debug/tj")],
+    },
+    "Rust rustc_serialize::json": {
+        "url": "https://doc.rust-lang.org/rustc-serialize/rustc_serialize/json/index.html",
+        "commands": [
+            os.path.join(PARSERS_DIR, "test_json-rustc_serialize/rj/target/debug/rj")
+        ],
     },
     "Rust serde_json": {
         "url": "https://github.com/serde-rs/json",
+        # "setup":["cargo", "build", "--release", os.path.join(PARSERS_DIR, "test_json-rust-serde_json/rj")],
         "commands": [
             os.path.join(PARSERS_DIR, "test_json-rust-serde_json/rj/target/release/rj")
-        ],
-    },
-    "Java Jackson 2.8.4": {
-        "url": "",
-        "commands": [
-            "/usr/bin/java",
-            "-jar",
-            os.path.join(PARSERS_DIR, "test_java_jackson_2_8_4/TestJSONParsing.jar"),
         ],
     },
 }
@@ -130,13 +129,17 @@ def run_tests(restrict_to_path=None, restrict_to_program=None):
                 if status == 0:
                     result = "PASS"
                 elif status == 1:
-                    result == "FAIL"
+                    result = "FAIL"
                 else:
                     result = "CRASH"
 
                 s = None
                 if result == "CRASH":
                     s = "%s\tCRASH\t%s" % (prog_name, filename)
+                elif filename.startswith("y_") and result == "PASS":
+                    s = "%s\tEXPECTED_RESULT\t%s" % (prog_name, filename)
+                elif filename.startswith("n_") and result == "FAIL":
+                    s = "%s\tEXPECTED_RESULT\t%s" % (prog_name, filename)
                 elif filename.startswith("y_") and result != "PASS":
                     s = "%s\tSHOULD_HAVE_PASSED\t%s" % (prog_name, filename)
                 elif filename.startswith("n_") and result == "PASS":
@@ -145,10 +148,13 @@ def run_tests(restrict_to_path=None, restrict_to_program=None):
                     s = "%s\tIMPLEMENTATION_PASS\t%s" % (prog_name, filename)
                 elif filename.startswith("i_") and result != "PASS":
                     s = "%s\tIMPLEMENTATION_FAIL\t%s" % (prog_name, filename)
+                else:
+                    s = "%s\t%s\t%s" % (prog_name, result, filename)
+                    print("should be unreachable")
+                    exit(2)
 
-                if s != None:
-                    print(s)
-                    log_file.write("%s\n" % s)
+                print(s, filename)
+                log_file.write("%s\n" % s)
 
     FNULL.close()
     log_file.close()
@@ -189,6 +195,7 @@ def f_status_for_lib_for_file(json_dir, results_dir):
 
     # comment to ignore some tests
     statuses = [
+        "EXPECTED_RESULT",
         "SHOULD_HAVE_FAILED",
         "SHOULD_HAVE_PASSED",
         "CRASH",
@@ -234,6 +241,7 @@ def f_status_for_path_for_lib(json_dir, results_dir):
 
     # comment to ignore some tests
     statuses = [
+        "EXPECTED_RESULT",
         "SHOULD_HAVE_FAILED",
         "SHOULD_HAVE_PASSED",
         "CRASH",
