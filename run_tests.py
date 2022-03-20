@@ -1010,6 +1010,7 @@ def generate_report(report_path, keep_only_first_result_in_set=False):
 ###
 
 if __name__ == "__main__":
+    # python3 run_tests.py --filter myparsers.json
 
     restrict_to_path = None
     """

@@ -1,1 +1,6 @@
-["Rust aws-smithy-json", "Rust serde_json", "Rust json-rust", "Rust rustc_serialize:json"]
+[
+    "Rust aws-smithy-json",
+    "Rust serde_json",
+    "Rust json-rust",
+    "Java Jackson 2.8.4"
+]

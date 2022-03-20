@@ -10,7 +10,3 @@ do
 done
 
 cd $BASEDIR
-
-python3 run_tests.py
-
-
