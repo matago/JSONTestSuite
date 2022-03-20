@@ -32,7 +32,6 @@ fn main() {
                 match (token, current_open_token) {
                     // We can accept any starting container token, regardless of what we need to close
                     // IF we haven't completed a full container cycle (no forests)
-                    // PUSH token to vec
                     (&Token::StartArray { offset: _ } | &Token::StartObject { offset: _ }, _) => {
                         // multi-doc not allowed
                         if document_opened && document_closed {
@@ -41,19 +40,12 @@ fn main() {
                         open_tokens.push(token);
                         document_opened = true;
                     }
-                    // We can't accept a closing token closing an Array if there is an open Object
-                    (&Token::EndArray { offset: _ }, Some(&Token::StartObject { offset: _ })) => {
+                    // We can't accept a closing token that doesnt match
+                    (&Token::EndArray { offset: _ }, Some(&Token::StartObject { offset: _ })) | (&Token::EndObject { offset: _ }, Some(&Token::StartArray { offset: _ })) => {
                         std::process::exit(2);
                     }
-                    // We can't accept a token closing an Object if there is an open Array
-                    (&Token::EndObject { offset: _ }, Some(&Token::StartArray { offset: _ })) => {
-                        std::process::exit(2);
-                    }
-                    // Becuase of the prior two arms, we can use an OR on both sides,
-                    (
-                        &Token::EndArray { offset: _ } | &Token::EndObject { offset: _ },
-                        Some(&Token::StartArray { offset: _ } | &Token::StartObject { offset: _ }),
-                    ) => {
+                    // Becuase of the prior specificity, we can use an OR inside the tuples for the happy path,
+                    (&Token::EndArray { offset: _ } | &Token::EndObject { offset: _ }, Some(&Token::StartArray { offset: _ } | &Token::StartObject { offset: _ })) => {
                         open_tokens.pop(); //pull out the matched token
                         if open_tokens.is_empty() {
                             document_closed = true; //we have completed a full container open and closure
